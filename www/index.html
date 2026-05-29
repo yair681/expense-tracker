@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>מעקב הוצאות משפחתי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Rubik:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: oklch(0.975 0.008 75);
+    --surface: oklch(1 0 0);
+    --surface-2: oklch(0.97 0.01 80);
+    --ink: oklch(0.27 0.012 70);
+    --ink-soft: oklch(0.46 0.012 70);
+    --ink-faint: oklch(0.62 0.012 70);
+    --line: oklch(0.91 0.008 80);
+    --accent: oklch(0.6 0.11 162);
+    --accent-deep: oklch(0.5 0.1 162);
+    --accent-soft: oklch(0.95 0.04 162);
+    --warm: oklch(0.68 0.12 55);
+    --warm-soft: oklch(0.95 0.04 60);
+    --danger: oklch(0.58 0.16 25);
+    --radius: 20px;
+    --radius-sm: 14px;
+    --shadow: 0 1px 2px oklch(0.5 0.02 70 / 0.06), 0 8px 24px oklch(0.5 0.02 70 / 0.07);
+    --shadow-soft: 0 1px 2px oklch(0.5 0.02 70 / 0.05), 0 4px 14px oklch(0.5 0.02 70 / 0.05);
+    --c1: oklch(0.62 0.12 162);
+    --c2: oklch(0.62 0.13 250);
+    --c3: oklch(0.66 0.13 55);
+    --c4: oklch(0.62 0.14 350);
+    --c5: oklch(0.62 0.04 80);
+    --c6: oklch(0.6 0.13 300);
+    --c7: oklch(0.63 0.13 200);
+    --c8: oklch(0.64 0.13 130);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: 'Assistant', system-ui, sans-serif;
+    background: oklch(0.93 0.01 80);
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num { font-family: 'Rubik', sans-serif; font-feature-settings: "tnum"; }
+
+  #app {
+    max-width: 460px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    background: var(--bg);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 60px oklch(0.4 0.02 70 / 0.12);
+    overflow: hidden;
+  }
+
+  .screen { display: none; flex-direction: column; flex: 1; min-height: 0; }
+  .screen.active { display: flex; }
+
+  .topbar {
+    padding: 22px 22px 14px;
+    background: var(--bg);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .topbar .eyebrow { font-size: 14px; font-weight: 600; color: var(--accent-deep); letter-spacing: 0.02em; }
+  .topbar h1 { margin: 2px 0 0; font-size: 27px; font-weight: 800; letter-spacing: -0.01em; }
+  .topbar .sub { font-size: 15px; color: var(--ink-faint); margin-top: 3px; }
+
+  .body {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 4px 18px 120px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-label { font-size: 15px; font-weight: 700; color: var(--ink-soft); margin: 0 0 14px; }
+
+  .amount-wrap {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 26px 22px 24px;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .amount-wrap .hint { font-size: 15px; color: var(--ink-faint); font-weight: 600; margin-bottom: 6px; }
+  .amount-field {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    direction: ltr;
+  }
+  .amount-field .shek { font-size: 40px; font-weight: 700; color: var(--ink-faint); font-family: 'Rubik', sans-serif; }
+  .amount-input {
+    font-family: 'Rubik', sans-serif;
+    font-size: 58px; font-weight: 700;
+    border: none; outline: none; background: transparent;
+    width: 100%; max-width: 280px; text-align: center;
+    color: var(--ink); padding: 0; line-height: 1.1;
+    caret-color: var(--accent);
+  }
+  .amount-input::placeholder { color: oklch(0.86 0.01 80); }
+  .amount-input::-webkit-outer-spin-button,
+  .amount-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .amount-input { -moz-appearance: textfield; }
+
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .cat-chip {
+    display: flex; align-items: center; gap: 11px;
+    background: var(--surface-2);
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 14px 14px;
+    cursor: pointer;
+    text-align: right;
+    transition: border-color .15s, background .15s, transform .08s;
+    min-height: 60px;
+  }
+  .cat-chip:active { transform: scale(0.98); }
+  .cat-chip.selected { border-color: var(--accent); background: var(--accent-soft); }
+  .cat-dot {
+    width: 38px; height: 38px; border-radius: 11px; flex: none;
+    display: grid; place-items: center; font-size: 20px;
+    background: var(--c5);
+  }
+  .cat-chip .cat-name { font-size: 16.5px; font-weight: 600; line-height: 1.15; }
+
+  .add-cat-btn {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: transparent;
+    border: 2px dashed oklch(0.78 0.03 162);
+    color: var(--accent-deep);
+    border-radius: var(--radius-sm);
+    padding: 14px; font-size: 16.5px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: background .15s;
+    min-height: 56px;
+  }
+  .add-cat-btn:active { background: var(--accent-soft); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none; border-radius: 16px;
+    padding: 18px; font-size: 20px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+    box-shadow: 0 6px 18px oklch(0.6 0.11 162 / 0.35);
+    transition: transform .08s, background .15s;
+  }
+  .btn-primary:active { transform: scale(0.985); background: var(--accent-deep); }
+  .btn-primary:disabled { background: oklch(0.85 0.02 162); box-shadow: none; cursor: default; color: oklch(0.98 0 0); }
+
+  .sticky-action {
+    position: sticky; bottom: 0;
+    padding: 14px 18px 18px;
+    background: linear-gradient(to top, var(--bg) 62%, transparent);
+  }
+
+  .total-card {
+    background: linear-gradient(150deg, var(--accent-deep), var(--accent));
+    color: white; border-radius: var(--radius);
+    padding: 26px 22px; margin-bottom: 16px;
+    box-shadow: 0 10px 30px oklch(0.55 0.11 162 / 0.3);
+  }
+  .total-card .tc-label { font-size: 16px; font-weight: 600; opacity: 0.9; }
+  .total-card .tc-amount { font-family: 'Rubik', sans-serif; font-size: 52px; font-weight: 700; line-height: 1.1; margin-top: 4px; }
+  .total-card .tc-meta { font-size: 14.5px; opacity: 0.88; margin-top: 6px; }
+
+  .forecast-card {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 20px 22px; margin-bottom: 16px;
+    box-shadow: var(--shadow-soft);
+    border-right: 5px solid var(--warm);
+  }
+  .forecast-card .fc-top { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--ink-soft); }
+  .forecast-card .fc-amount { font-family: 'Rubik', sans-serif; font-size: 40px; font-weight: 700; color: var(--warm); margin: 6px 0 4px; line-height: 1.1; }
+  .forecast-card .fc-note { font-size: 15px; color: var(--ink-soft); line-height: 1.5; }
+  .forecast-card .fc-note b { color: var(--ink); }
+
+  .bk-row { margin-bottom: 16px; }
+  .bk-row:last-child { margin-bottom: 0; }
+  .bk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .bk-head .cat-dot { width: 30px; height: 30px; border-radius: 9px; font-size: 16px; }
+  .bk-name { font-size: 16.5px; font-weight: 600; flex: 1; }
+  .bk-amount { font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 17px; }
+  .bk-pct { font-size: 14px; color: var(--ink-faint); font-weight: 600; min-width: 42px; text-align: left; }
+  .bar { height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 6px; transition: width .5s ease; }
+
+  .exp-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .exp-item:last-child { border-bottom: none; }
+  .exp-main { flex: 1; min-width: 0; }
+  .exp-cat { font-size: 16.5px; font-weight: 600; }
+  .exp-time { font-size: 13.5px; color: var(--ink-faint); }
+  .exp-amount { font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 18px; }
+  .exp-del {
+    border: none; background: var(--surface-2); color: var(--danger);
+    width: 38px; height: 38px; border-radius: 10px; flex: none;
+    font-size: 20px; cursor: pointer; display: grid; place-items: center;
+    transition: background .15s;
+  }
+  .exp-del:active { background: oklch(0.93 0.04 25); }
+
+  .empty { text-align: center; color: var(--ink-faint); padding: 40px 20px; font-size: 16px; }
+  .empty .big { font-size: 44px; margin-bottom: 10px; }
+
+  .nav {
+    display: flex; background: var(--surface);
+    border-top: 1px solid var(--line);
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px oklch(0.5 0.02 70 / 0.05);
+    z-index: 6;
+  }
+  .nav button {
+    flex: 1; border: none; background: transparent; cursor: pointer;
+    padding: 8px 4px; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-family: inherit; color: var(--ink-faint); font-weight: 600; font-size: 14px;
+    transition: color .15s;
+  }
+  .nav button .ico { font-size: 24px; line-height: 1; }
+  .nav button.active { color: var(--accent-deep); }
+  .nav button.active .ico-bg { background: var(--accent-soft); }
+  .nav button .ico-bg { padding: 5px 20px; border-radius: 999px; transition: background .15s; }
+
+  #onboarding {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--bg);
+    max-width: 460px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    box-shadow: 0 0 60px oklch(0.4 0.02 70 / 0.12);
+  }
+  .onb-body { flex: 1; overflow-y: auto; padding: 30px 26px 16px; }
+  .onb-badge {
+    width: 70px; height: 70px; border-radius: 20px;
+    background: var(--accent-soft); color: var(--accent-deep);
+    display: grid; place-items: center; font-size: 36px;
+    margin-bottom: 22px;
+  }
+  .onb-body h2 { font-size: 30px; font-weight: 800; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .onb-body .lead { font-size: 18px; color: var(--ink-soft); margin: 0 0 26px; line-height: 1.55; }
+  .step { display: flex; gap: 14px; margin-bottom: 18px; align-items: flex-start; }
+  .step-num {
+    flex: none; width: 40px; height: 40px; border-radius: 12px;
+    background: var(--surface); box-shadow: var(--shadow-soft);
+    display: grid; place-items: center; font-size: 22px;
+  }
+  .step-txt h3 { margin: 0 0 2px; font-size: 18px; font-weight: 700; }
+  .step-txt p { margin: 0; font-size: 16px; color: var(--ink-soft); line-height: 1.5; }
+  .onb-why {
+    background: var(--warm-soft); border-radius: var(--radius-sm);
+    padding: 16px 18px; margin-top: 8px;
+    font-size: 16px; color: oklch(0.42 0.06 55); line-height: 1.55;
+  }
+  .onb-why b { color: oklch(0.38 0.09 50); }
+  .onb-foot { padding: 14px 22px calc(20px + env(safe-area-inset-bottom)); background: var(--bg); }
+
+  .modal-scrim {
+    position: fixed; inset: 0; z-index: 120;
+    background: oklch(0.3 0.02 70 / 0.45);
+    display: none; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-scrim.open { display: flex; }
+  .modal {
+    background: var(--surface); width: 100%; max-width: 460px;
+    border-radius: 26px 26px 0 0;
+    padding: 24px 22px calc(24px + env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 40px oklch(0.3 0.02 70 / 0.2);
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal h3 { margin: 0 0 4px; font-size: 22px; font-weight: 800; }
+  .modal p { margin: 0 0 18px; font-size: 15px; color: var(--ink-faint); }
+  .modal label { font-size: 15px; font-weight: 700; color: var(--ink-soft); display: block; margin-bottom: 8px; }
+  .text-input {
+    width: 100%; font-family: inherit; font-size: 19px;
+    padding: 15px 16px; border: 2px solid var(--line); border-radius: 14px;
+    outline: none; background: var(--surface-2); color: var(--ink);
+    transition: border-color .15s;
+  }
+  .text-input:focus { border-color: var(--accent); background: var(--surface); }
+  .icon-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .icon-opt {
+    width: 46px; height: 46px; border-radius: 12px; border: 2px solid var(--line);
+    background: var(--surface-2); font-size: 22px; cursor: pointer;
+    display: grid; place-items: center; transition: border-color .15s, background .15s;
+  }
+  .icon-opt.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+  .btn-ghost {
+    flex: 1; background: var(--surface-2); color: var(--ink-soft);
+    border: none; border-radius: 14px; padding: 16px; font-size: 17px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+  .modal-actions .btn-primary { flex: 1.4; padding: 16px; font-size: 17px; }
+
+  #toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(20px);
+    bottom: 100px; z-index: 200;
+    background: var(--ink); color: white;
+    padding: 13px 22px; border-radius: 999px;
+    font-size: 16px; font-weight: 600;
+    box-shadow: 0 8px 24px oklch(0.3 0.02 70 / 0.3);
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="onb-body">
+    <div class="onb-badge">🏡</div>
+    <h2>שבוע אחד.<br />תמונה ברורה.</h2>
+    <p class="lead">בואו נעקוב יחד אחרי ההוצאות ההכרחיות במשך שבוע — כדי לדעת בשקט אם הדירה החדשה אפשרית.</p>
+    <div class="step">
+      <div class="step-num">📝</div>
+      <div class="step-txt">
+        <h3>רושמים כל קנייה</h3>
+        <p>בכל פעם שקונים משהו, מקלידים את הסכום ובוחרים קטגוריה. לוקח שתי שניות.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">📊</div>
+      <div class="step-txt">
+        <h3>רואים את התמונה</h3>
+        <p>בסוף השבוע רואים כמה הוצאתם בסך הכל ועל מה הלך הכי הרבה כסף.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🔮</div>
+      <div class="step-txt">
+        <h3>מקבלים חיזוי חודשי</h3>
+        <p>נחשב לכם כמה זה יוצא בחודש שלם, לפי קצב ההוצאות שלכם.</p>
+      </div>
+    </div>
+    <div class="onb-why">
+      <b>למה זה חשוב?</b> כשרואים את המספרים האמיתיים, אפשר להחליט על הדירה החדשה בראש שקט — ולדעת מראש אם העלויות החודשיות אפשריות בשבילכם.
+    </div>
+  </div>
+  <div class="onb-foot">
+    <button class="btn-primary" id="startBtn">בואו נתחיל ←</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- ADD SCREEN -->
+  <section class="screen active" id="screen-add">
+    <div class="topbar">
+      <div class="eyebrow">הוספת הוצאה</div>
+      <h1>מה קניתם?</h1>
+      <div class="sub">רשמו את הסכום ובחרו קטגוריה</div>
+    </div>
+    <div class="body">
+      <div class="amount-wrap">
+        <div class="hint">סכום ההוצאה</div>
+        <div class="amount-field">
+          <span class="shek">₪</span>
+          <input class="amount-input num" id="amountInput" type="number" inputmode="decimal" placeholder="0" min="0" step="0.01" />
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-label">בחרו קטגוריה</p>
+        <div class="cat-grid" id="catGrid"></div>
+      </div>
+    </div>
+    <div class="sticky-action">
+      <button class="btn-primary" id="addBtn" disabled>הוסף הוצאה</button>
+    </div>
+  </section>
+
+  <!-- SUMMARY SCREEN -->
+  <section class="screen" id="screen-summary">
+    <div class="topbar">
+      <div class="eyebrow">סיכום השבוע</div>
+      <h1>התמונה המלאה</h1>
+      <div class="sub" id="expCount">עדיין לא נרשמו הוצאות</div>
+    </div>
+    <div class="body" id="summaryBody"></div>
+  </section>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <button id="nav-add" class="active" onclick="go('add')">
+      <span class="ico-bg"><span class="ico">➕</span></span>
+      <span>הוספה</span>
+    </button>
+    <button id="nav-summary" onclick="go('summary')">
+      <span class="ico-bg"><span class="ico">📊</span></span>
+      <span>סיכום</span>
+    </button>
+  </nav>
+</div>
+
+<!-- MODAL -->
+<div class="modal-scrim" id="catModal">
+  <div class="modal">
+    <h3>קטגוריה חדשה</h3>
+    <p>הוסיפו סוג הוצאה משלכם</p>
+    <label for="newCatName">שם הקטגוריה</label>
+    <input class="text-input" id="newCatName" type="text" maxlength="20" placeholder="לדוגמה: ילדים, חיות מחמד..." />
+    <label style="margin-top:18px;">בחרו סמל</label>
+    <div class="icon-picker" id="iconPicker"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="catCancel">ביטול</button>
+      <button class="btn-primary" id="catSave">הוסף קטגוריה</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const LS = {
+  expenses: 'fet_expenses_v1',
+  categories: 'fet_categories_v1',
+  onboarded: 'fet_onboarded_v1'
+};
+
+const DEFAULT_CATS = [
+  { id: 'food',      name: 'אוכל וסופר',     icon: '🛒', color: 'var(--c1)' },
+  { id: 'transport', name: 'תחבורה ודלק',    icon: '🚗', color: 'var(--c2)' },
+  { id: 'bills',     name: 'חשבונות',        icon: '🧾', color: 'var(--c3)' },
+  { id: 'health',    name: 'בריאות ותרופות', icon: '💊', color: 'var(--c4)' },
+  { id: 'other',     name: 'אחר',            icon: '📦', color: 'var(--c5)' }
+];
+
+const NEW_CAT_COLORS = ['var(--c6)','var(--c7)','var(--c8)','var(--c2)','var(--c4)','var(--c1)'];
+const ICON_CHOICES = ['🏷️','🧒','🐾','🎁','✂️','📚','👕','🍽️','🏠','💡','🎉','🛠️','🚌','💳'];
+
+function load(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch (e) { return fallback; }
+}
+function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+}
+
+let categories = load(LS.categories, null) || DEFAULT_CATS.slice();
+let expenses   = load(LS.expenses, []) || [];
+let selectedCatId = null;
+let pickedIcon = ICON_CHOICES[0];
+
+function fmt(n) { return Math.round(n).toLocaleString('he-IL'); }
+function fmt2(n) { return (Math.round(n * 100) / 100).toLocaleString('he-IL', { maximumFractionDigits: 2 }); }
+function catById(id) { return categories.find(c => c.id === id) || { name: 'אחר', icon: '📦', color: 'var(--c5)' }; }
+
+function timeLabel(ts) {
+  const d = new Date(ts);
+  const days = ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת'];
+  const time = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  return days[d.getDay()] + ' · ' + time;
+}
+
+function go(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  document.getElementById('nav-add').classList.toggle('active', screen === 'add');
+  document.getElementById('nav-summary').classList.toggle('active', screen === 'summary');
+  document.querySelectorAll('.body').forEach(b => b.scrollTop = 0);
+  if (screen === 'summary') renderSummary();
+  localStorage.setItem('fet_screen', screen);
+}
+
+function renderCats() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = '';
+  categories.forEach(c => {
+    const chip = document.createElement('button');
+    chip.className = 'cat-chip' + (c.id === selectedCatId ? ' selected' : '');
+    chip.onclick = () => { selectedCatId = c.id; renderCats(); updateAddBtn(); };
+    chip.innerHTML =
+      '<span class="cat-dot" style="background:' + c.color + '33;color:' + c.color + '">' + c.icon + '</span>' +
+      '<span class="cat-name">' + escapeHtml(c.name) + '</span>';
+    grid.appendChild(chip);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-cat-btn';
+  addBtn.innerHTML = '<span style="font-size:20px;">➕</span> הוסף קטגוריה';
+  addBtn.onclick = openCatModal;
+  grid.appendChild(addBtn);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+const amountInput = document.getElementById('amountInput');
+const addBtn = document.getElementById('addBtn');
+
+function updateAddBtn() {
+  const val = parseFloat(amountInput.value);
+  addBtn.disabled = !(val > 0 && selectedCatId);
+}
+amountInput.addEventListener('input', updateAddBtn);
+
+addBtn.addEventListener('click', () => {
+  const val = parseFloat(amountInput.value);
+  if (!(val > 0) || !selectedCatId) return;
+  expenses.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2,6), amount: val, catId: selectedCatId, ts: Date.now() });
+  save(LS.expenses, expenses);
+  const c = catById(selectedCatId);
+  amountInput.value = '';
+  selectedCatId = null;
+  renderCats();
+  updateAddBtn();
+  amountInput.blur();
+  showToast('✓ נרשמה הוצאה של ₪' + fmt2(val) + ' · ' + c.name);
+});
+
+function renderSummary() {
+  const body = document.getElementById('summaryBody');
+  const count = expenses.length;
+  document.getElementById('expCount').textContent =
+    count === 0 ? 'עדיין לא נרשמו הוצאות'
+    : count + (count === 1 ? ' הוצאה נרשמה' : ' הוצאות נרשמו');
+
+  if (count === 0) {
+    body.innerHTML = '<div class="empty"><div class="big">🧾</div>עדיין לא רשמתם הוצאות.<br />עברו למסך ההוספה כדי להתחיל לעקוב.</div>';
+    return;
+  }
+
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  const monthly = total * 4.33;
+
+  const byCat = {};
+  expenses.forEach(e => { byCat[e.catId] = (byCat[e.catId] || 0) + e.amount; });
+  const rows = Object.keys(byCat)
+    .map(id => ({ cat: catById(id), id, sum: byCat[id] }))
+    .sort((a, b) => b.sum - a.sum);
+
+  let html = '';
+
+  html +=
+    '<div class="total-card">' +
+      '<div class="tc-label">סך הכל הוצאתם השבוע</div>' +
+      '<div class="tc-amount">₪' + fmt2(total) + '</div>' +
+      '<div class="tc-meta">על פני ' + count + (count === 1 ? ' הוצאה' : ' הוצאות') + '</div>' +
+    '</div>';
+
+  html +=
+    '<div class="forecast-card">' +
+      '<div class="fc-top">🔮 חיזוי חודשי</div>' +
+      '<div class="fc-amount">₪' + fmt(monthly) + '</div>' +
+      '<div class="fc-note">לפי קצב ההוצאות שלכם, ההוצאה החודשית הצפויה היא <b>כ-₪' + fmt(monthly) + '</b>.<br />' +
+      '<span style="color:var(--ink-faint);font-size:14px;">(הסכום השבועי × 4.33 שבועות בחודש)</span></div>' +
+    '</div>';
+
+  html += '<div class="card"><p class="card-label">פירוט לפי קטגוריה</p>';
+  rows.forEach(r => {
+    const pct = total > 0 ? (r.sum / total * 100) : 0;
+    html +=
+      '<div class="bk-row">' +
+        '<div class="bk-head">' +
+          '<span class="cat-dot" style="background:' + r.cat.color + '33;color:' + r.cat.color + '">' + r.cat.icon + '</span>' +
+          '<span class="bk-name">' + escapeHtml(r.cat.name) + '</span>' +
+          '<span class="bk-amount">₪' + fmt2(r.sum) + '</span>' +
+          '<span class="bk-pct">' + Math.round(pct) + '%</span>' +
+        '</div>' +
+        '<div class="bar"><span style="width:' + pct + '%;background:' + r.cat.color + '"></span></div>' +
+      '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="card"><p class="card-label">כל ההוצאות</p>';
+  expenses.slice().reverse().forEach(e => {
+    const c = catById(e.catId);
+    html +=
+      '<div class="exp-item">' +
+        '<span class="cat-dot" style="background:' + c.color + '33;color:' + c.color + '">' + c.icon + '</span>' +
+        '<div class="exp-main">' +
+          '<div class="exp-cat">' + escapeHtml(c.name) + '</div>' +
+          '<div class="exp-time">' + timeLabel(e.ts) + '</div>' +
+        '</div>' +
+        '<span class="exp-amount">₪' + fmt2(e.amount) + '</span>' +
+        '<button class="exp-del" onclick="deleteExpense(\'' + e.id + '\')" aria-label="מחק">🗑</button>' +
+      '</div>';
+  });
+  html += '</div>';
+
+  body.innerHTML = html;
+}
+
+function deleteExpense(id) {
+  const e = expenses.find(x => x.id === id);
+  if (!e) return;
+  if (!confirm('למחוק את ההוצאה הזו (₪' + fmt2(e.amount) + ')?')) return;
+  expenses = expenses.filter(x => x.id !== id);
+  save(LS.expenses, expenses);
+  renderSummary();
+}
+
+const modal = document.getElementById('catModal');
+const newCatName = document.getElementById('newCatName');
+const iconPicker = document.getElementById('iconPicker');
+
+function renderIconPicker() {
+  iconPicker.innerHTML = '';
+  ICON_CHOICES.forEach(ic => {
+    const b = document.createElement('button');
+    b.className = 'icon-opt' + (ic === pickedIcon ? ' sel' : '');
+    b.textContent = ic;
+    b.onclick = () => { pickedIcon = ic; renderIconPicker(); };
+    iconPicker.appendChild(b);
+  });
+}
+
+function openCatModal() {
+  newCatName.value = '';
+  pickedIcon = ICON_CHOICES[0];
+  renderIconPicker();
+  modal.classList.add('open');
+  setTimeout(() => newCatName.focus(), 250);
+}
+function closeCatModal() { modal.classList.remove('open'); }
+
+document.getElementById('catCancel').onclick = closeCatModal;
+modal.addEventListener('click', e => { if (e.target === modal) closeCatModal(); });
+
+document.getElementById('catSave').onclick = () => {
+  const name = newCatName.value.trim();
+  if (!name) { newCatName.focus(); return; }
+  const id = 'c' + Date.now();
+  const color = NEW_CAT_COLORS[categories.length % NEW_CAT_COLORS.length];
+  categories.push({ id, name, icon: pickedIcon, color });
+  save(LS.categories, categories);
+  selectedCatId = id;
+  renderCats();
+  updateAddBtn();
+  closeCatModal();
+  showToast('✓ נוספה קטגוריה: ' + name);
+};
+
+newCatName.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('catSave').click(); });
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+document.getElementById('startBtn').onclick = () => {
+  save(LS.onboarded, true);
+  document.getElementById('onboarding').style.display = 'none';
+};
+
+function initOnboarding() {
+  if (load(LS.onboarded, false)) {
+    document.getElementById('onboarding').style.display = 'none';
+  }
+}
+
+initOnboarding();
+renderCats();
+updateAddBtn();
+const lastScreen = localStorage.getItem('fet_screen');
+if (lastScreen === 'summary') go('summary');
+</script>
+</body>
+</html>

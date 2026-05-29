@@ -1,0 +1,15 @@
+{
+  "appId": "com.family.expensetracker",
+  "appName": "מעקב הוצאות",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
